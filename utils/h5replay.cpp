@@ -140,9 +140,10 @@ err_out:;
 	if (dids) { free (dids); }
 	if (faplid >= 0) { H5Pclose (faplid); }
 	if (dxplid >= 0) { H5Pclose (dxplid); }
-	if (aid >= 0) { H5Fclose (aid); }
-	if (lgid >= 0) { H5Fclose (lgid); }
+	if (aid >= 0) { H5Aclose (aid); }
+	if (lgid >= 0) { H5Gclose (lgid); }
 	if (finid >= 0) { H5Fclose (finid); }
+	for (auto &dset : copy_arg.dsets) { H5Dclose (dset.id); }
 	if (foutid >= 0) { H5Fclose (foutid); }
 	if (fin != MPI_FILE_NULL) { MPI_File_close (&fin); }
 	if (fout != MPI_FILE_NULL) { MPI_File_close (&fout); }

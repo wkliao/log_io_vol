@@ -1,9 +1,11 @@
+#include "h5replay_copy.hpp"
+
 #include <hdf5.h>
 
-#include "h5replay.hpp"
-#include "h5replay_copy.hpp"
-#include <iostream>
 #include <cstdio>
+#include <iostream>
+
+#include "h5replay.hpp"
 
 herr_t h5replay_copy_handler (hid_t o_id,
 							  const char *name,
@@ -18,19 +20,24 @@ herr_t h5replay_copy_handler (hid_t o_id,
 	hid_t dcplid					= -1;
 	h5replay_copy_handler_arg *argp = (h5replay_copy_handler_arg *)op_data;
 
-#ifdef LOGVOL_DEBUG
-	std::cout << "Copying " << name << std::endl;
-#endif
-
 	// Skip unnamed and hidden object
-	if ((name == NULL) || (name[0] == '_')) { goto err_out; }
+	if ((name == NULL) || (name[0] == '_') || (name[0] == '/' || (name[0] == '.'))) {
+#ifdef LOGVOL_DEBUG
+		std::cout << "Stkip " << name << std::endl;
+#endif
+		goto err_out;
+	}
 
 	// Copy a dataset
 	if (object_info->type == H5O_TYPE_DATASET) {
 		int id;
 		int ndim;
-        hsize_t zero=0;
+		hsize_t zero = 0;
 		hsize_t dims[H5S_MAX_RANK], mdims[H5S_MAX_RANK];
+
+#ifdef LOGVOL_DEBUG
+		std::cout << "Copying " << name << std::endl;
+#endif
 
 		// Open src dataset
 		src_did = H5Dopen2 (o_id, name, H5P_DEFAULT);
@@ -64,7 +71,8 @@ herr_t h5replay_copy_handler (hid_t o_id,
 		H5Aclose (aid);
 		aid = -1;
 		// Datatype and esize
-		tid=H5Dget_type(src_did); CHECK_ID(tid)
+		tid = H5Dget_type (src_did);
+		CHECK_ID (tid)
 
 		// Create dst dataset
 		err = H5Pset_layout (dcplid, H5D_CONTIGUOUS);
@@ -74,16 +82,17 @@ herr_t h5replay_copy_handler (hid_t o_id,
 		dst_did = H5Dcreate2 (argp->fid, name, tid, sid, H5P_DEFAULT, dcplid, H5P_DEFAULT);
 		CHECK_ID (dst_did)
 
-        // Copy all attributes
-        err= H5Aiterate2( src_did, H5_INDEX_CRT_ORDER, H5_ITER_INC, &zero, h5replay_attr_copy_handler, &dst_did);
-        CHECK_ERR
+		// Copy all attributes
+		//err = H5Aiterate2 (src_did, H5_INDEX_CRT_ORDER, H5_ITER_INC, &zero,
+		//				   h5replay_attr_copy_handler, &dst_did);
+		//CHECK_ERR
 
-        // Record did for replaying data
-        // Do not close dst_did
-        argp->dsets[id].id=dst_did;
-		argp->dsets[id].type=tid;
-		argp->dsets[id].esize=H5Tget_size(tid);
-		argp->dsets[id].ndim=ndim;
+		// Record did for replaying data
+		// Do not close dst_did
+		argp->dsets[id].id	  = dst_did;
+		argp->dsets[id].type  = tid;
+		argp->dsets[id].esize = H5Tget_size (tid);
+		argp->dsets[id].ndim  = ndim;
 	} else {  // Copy anything else as is
 		err = H5Ocopy (o_id, name, argp->fid, name, H5P_DEFAULT, H5P_DEFAULT);
 		CHECK_ERR
@@ -92,17 +101,21 @@ herr_t h5replay_copy_handler (hid_t o_id,
 err_out:;
 	if (sid >= 0) { H5Sclose (sid); }
 	if (aid >= 0) { H5Aclose (aid); }
-	if (src_did >= 0) { H5Sclose (src_did); }
+	if (dcplid >= 0) { H5Pclose (dcplid); }
+	if (src_did >= 0) { H5Dclose (src_did); }
 	return err;
 }
 
-herr_t h5replay_attr_copy_handler( hid_t location_id, const char *attr_name, const H5A_info_t *ainfo, void *op_data){
-    herr_t err=0;
-    hid_t dst_did=*((hid_t*)(op_data));
-    
-    err=H5Ocopy(location_id,attr_name,dst_did,attr_name,H5P_DEFAULT,H5P_DEFAULT);
-    CHECK_ERR
+herr_t h5replay_attr_copy_handler (hid_t location_id,
+								   const char *attr_name,
+								   const H5A_info_t *ainfo,
+								   void *op_data) {
+	herr_t err	  = 0;
+	hid_t dst_did = *((hid_t *)(op_data));
 
-    err_out:;
+	// err=H5Ocopy(location_id,attr_name,dst_did,attr_name,H5P_DEFAULT,H5P_DEFAULT);
+	// CHECK_ERR
+
+err_out:;
 	return err;
 }

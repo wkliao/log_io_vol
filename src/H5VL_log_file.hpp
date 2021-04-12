@@ -8,7 +8,6 @@
 #include <string>
 #include "H5VL_log_obj.hpp"
 #include "H5VL_log.h"
-#include "H5VL_logi.hpp"
 #include "H5VL_logi_idx.hpp"
 #include "H5VL_logi_nb.hpp"
 #include "H5VL_logi_profiling.hpp"

@@ -343,7 +343,7 @@ err_out:;
 herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	herr_t err = 0;
 	int mpierr;
-	int attbuf[3];
+	int attbuf[4];
 
 	TIMER_START;
 
@@ -382,6 +382,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 		attbuf[0] = fp->ndset;
 		attbuf[1] = fp->nldset;
 		attbuf[2] = fp->nmdset;
+		attbuf[3] = fp->config;
 		err		  = H5VL_logi_put_att (fp, "_int_att", H5T_NATIVE_INT32, attbuf, fp->dxplid);
 		CHECK_ERR
 	}

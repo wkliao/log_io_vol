@@ -27,7 +27,7 @@ herr_t h5replay_parse_meta (int rank,
 	int i, j, k, l;
 	hid_t did = -1;
 	MPI_Offset nsec;
-	hid_t dsid, msid;
+	hid_t dsid = -1, msid = -1;
 	hsize_t start, count, one = 1;
 	meta_sec sec;
 	char *ep;
@@ -196,7 +196,7 @@ herr_t h5replay_parse_meta (int rank,
 						memcpy (sel.start, bp, sizeof (MPI_Offset) * dsets[req.did].ndim);
 						bp += sizeof (MPI_Offset) * dsets[req.did].ndim;
 					}
-					req.sels.push_back(sel);
+					req.sels.push_back (sel);
 
 					if (!(hdr->flag & H5VL_LOGI_META_FLAG_MUL_SELX)) {
 						req.foff = *((MPI_Offset *)bp);
@@ -204,7 +204,7 @@ herr_t h5replay_parse_meta (int rank,
 						req.fsize = *((MPI_Offset *)bp);
 						bp++;
 						reqs[req.did].push_back (req);	// treat as separate meta block
-						req.sels.clear();
+						req.sels.clear ();
 					}
 				}
 				reqs[req.did].push_back (req);
@@ -218,7 +218,7 @@ herr_t h5replay_parse_meta (int rank,
 	}
 err_out:;
 	if (zbuf) { free (zbuf); }
-	if (did >= 0) { H5Fclose (did); }
+	if (did >= 0) { H5Dclose (did); }
 	if (msid >= 0) { H5Sclose (msid); }
 	if (dsid >= 0) { H5Sclose (dsid); }
 	return err;

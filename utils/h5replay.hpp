@@ -8,6 +8,7 @@
 		if (err < 0) {                                                \
 			printf ("Error at line %d in %s:\n", __LINE__, __FILE__); \
 			H5Eprint1 (stdout);                                       \
+			abort(); \
 			goto err_out;                                             \
 		}                                                             \
 	}
@@ -20,6 +21,7 @@
 			MPI_Error_string (mpierr, errstr, &el);                              \
 			printf ("Error at line %d in %s: %s\n", __LINE__, __FILE__, errstr); \
 			err = -1;                                                            \
+			abort(); \
 			goto err_out;                                                        \
 		}                                                                        \
 	}
@@ -29,6 +31,7 @@
 		if (A < 0) {                                                  \
 			printf ("Error at line %d in %s:\n", __LINE__, __FILE__); \
 			H5Eprint1 (stdout);                                       \
+			abort(); \
 			goto err_out;                                             \
 		}                                                             \
 	}
