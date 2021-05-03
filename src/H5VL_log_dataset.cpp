@@ -521,18 +521,18 @@ herr_t H5VL_log_dataset_write (void *dset,
 	// Encode and pack selections
 	TIMER_START
 	// Jump to logical selection
-	mbuf = r.meta_buf + sizeof (H5VL_logi_meta_hdr) +
-		   sizeof (MPI_Offset) * 2;	 // Header, file offset, size
+	mbuf = r.meta_buf + sizeof (H5VL_logi_meta_hdr); // Header
+ 
 	if (r.hdr.flag & H5VL_LOGI_META_FLAG_SEL_ENCODE) {
 		MPI_Offset soff, eoff;
+
+		// Encoded format must be multiple sel, add n block field
+		*((int *)mbuf) = r.nsel;
+		mbuf += sizeof (int) + sizeof (MPI_Offset) * 2;	// Skip through file location
 
 		// Dsteps
 		memcpy (mbuf, dp->dsteps, sizeof (MPI_Offset) * (dp->ndim - 1));
 		mbuf += sizeof (MPI_Offset) * (dp->ndim - 1);
-
-		// Encoded format must be multiple sel, add n block field
-		*((int *)mbuf) = r.nsel;
-		mbuf += sizeof (int);
 
 		if (arg.n) {
 			r.nsel	= arg.n;
@@ -591,6 +591,9 @@ herr_t H5VL_log_dataset_write (void *dset,
 			*((int *)mbuf) = r.nsel;
 			mbuf += sizeof (int);
 		}
+
+		// Skip through file offsets
+		mbuf += sizeof (MPI_Offset) * 2;
 
 		if (arg.n) {
 			r.nsel = arg.n;

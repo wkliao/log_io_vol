@@ -22,7 +22,7 @@ Everyone is encouraged to discuss and make suggestions on this document.
 * Constructing the metadata table
   To allow efficient searching for write requests in log datasets, we construct a metadata table of the log entries.
   Each entry of the metadata table stores the metadata of a write request. 
-  The metadata includes the location of data in the file and where the data belongs to (which dataset, which part).
+  The metadata includes the block of data in the file and where the data belongs to (which dataset, which part).
   Entries are sorted based on increasing order of dataset IDs of the dataset involved.
   + Storing the metadata table as an unlimited 1-dimensional byte dataset
     There is only one metadata table dataset.
@@ -108,8 +108,8 @@ Everyone is encouraged to discuss and make suggestions on this document.
     Everything in HDF5 is indexed using B-tree.
     There is a B-tree under each group to track data objects within that group.
     There is a B-tree for every chunked dataset to track its chunks.
-    Locating data objects requires traveling the B-tree form the current location (e.g., the loc_id passed to H5Dopn).
-    Since the location of a child node of a B-tree is not known before reading its parent node, traversing a B-tree may involve multiple writes.
+    Locating data objects requires traveling the B-tree form the current block (e.g., the loc_id passed to H5Dopn).
+    Since the block of a child node of a B-tree is not known before reading its parent node, traversing a B-tree may involve multiple writes.
     + We should avoid creating many hidden data object (datasets, groups)
       Metadata operations are relatively expensive compared to NetCDF.
       They may involve multiple read operations.
@@ -123,7 +123,7 @@ information of all write requests logged by the log driver. Below is the format
 specification of the metadata table in the form of Backus Normal Form (BNF)
 grammar notation.
 ```
-metadata_table		= signature endianness entry_list
+metadata_table		= signature endianness index_table
 
 signature		= 'L' 'O' 'G' VERSION
 VERSION			= \x01
@@ -131,33 +131,33 @@ endianness		= ZERO |	// little Endian
 			  ONE		// big Endian
 
 entry_list		= nelems [entry_off ...] [entry_len ...] index_table
+nelems = INT32
 entry_off		= INT64		// starting file offset of an entry
 entry_len		= INT64		// byte size of an entry
 					// entry_off and entry_len are pairwise
 
-index_table		= [entry ...]	// log index table
-entry			= dsetid flag location
+index_table		= division_table [entry ...]	// log index table
+entry			= hdr block
 					// A log entry contains metadata of
 					// write requests to a dataset. One
 					// dataset may have more than one
 					// entry.
-
+hdr = entry_size dsetid flag
+entry_size = INT32
 dsetid			= INT64		// dataset ID as ordered in var_list
-
+flag = INT32
 flag		= is_varn_loc is_merged_loc is_offset_loc is_zip_loc
 is_varn_loc = FALSE1 | TRUE1
 is_merged_loc = FALSE1 | TRUE1
 is_offset_loc = FALSE1 | TRUE1
 is_zip_loc = FALSE1 | TRUE1
 
-location = zip_location | raw_location
-zip_location = [BYTE...]
-raw_location = loc_encode_into location_data
-loc_encode_into = [INT64 ...] // Information to translate start and count to flattened offsets
+division_table = nelems [end_offset ...]
+end_offset = INT64
 
-location_data = varn_loc | merged_loc | simple_loc
+block = single_block | multi_block | merged_block | compressed_block
 
-varn_loc = file_loc dset_loc dset_loc [dset_loc ...]
+single_block = file_loc dset_loc
 
 file_loc		= file_off file_size 
 file_off = INT64		// starting file offset storing the logged dataset contents
@@ -170,8 +170,18 @@ end_off = INT64
 raw_dset_loc = start_cord count
 start_cord = [INT64 ...]
 count = [INT64 ...]
-simple_loc= file_loc dset_loc
-merged_loc = [simple_loc ...]
+
+multi_block = nblocks [loc_encode_into] file_loc [dset_loc ...]
+
+nblocks = INT32
+
+loc_encode_into = [INT64 ...] // Information to translate start and count to flattened offsets
+
+merged_block = nblocks [loc_encode_into] [block_loc ...]
+
+block_loc = dset_loc file_loc
+
+compressed_block = nblocks [BYTE...] // Compressed file_locs and dset_locs of either multi_block or merged_block
 
 FALSE1    = 0	// 1-bit integer in native representation
 TRUE1     = 1	// 1-bit integer in native representation
