@@ -98,6 +98,7 @@ define(`H5VL_LOG_TIMERS', `( `H5VL_log_file_create', dnl
                             `H5VL_log_nb_flush_write_reqs_sync', dnl
                             `H5VL_log_nb_flush_write_reqs_create', dnl
                             `H5VL_log_nb_flush_write_reqs_wr', dnl
+                            `H5VL_log_nb_flush_write_reqs_pack', dnl
                             `H5VL_log_nb_flush_write_reqs_create_virtual', dnl
                             `H5VL_log_nb_write_reqs_aligned', dnl
                             `H5VL_log_nb_flush_write_reqs_size', dnl
