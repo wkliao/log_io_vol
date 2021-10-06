@@ -308,11 +308,43 @@ herr_t H5VL_log_filei_metaflush (H5VL_log_file_t *fp) {
 		H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_CLOSE);
 
 		// Write metadata
-		MPI_Barrier(fp->comm);
-		H5VL_LOGI_PROFILING_TIMER_START;  // TIMER_H5VL_LOG_FILEI_METAFLUSH_WRITE
-		err = MPI_File_write_at_all (fp->fh, mdoff + rbuf[0], MPI_BOTTOM, 1, mmtype, &stat);
-		CHECK_MPIERR
-		H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_WRITE);
+		{
+			int wsize;
+			char *tbuf;
+			int pos = 0;
+
+			H5VL_LOGI_PROFILING_TIMER_START;
+			MPI_Type_size (mmtype, &wsize);
+			tbuf   = (char *)malloc (wsize);
+			mpierr = MPI_Pack (MPI_BOTTOM, 1, mmtype, tbuf, wsize, &pos, fp->comm);
+			CHECK_MPIERR
+			H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_PACK);
+
+			printf ("Rank %d: off = %lld, size = %d, end=%lld\n", fp->rank, mdoff + rbuf[0], wsize,
+					mdoff + rbuf[0] + wsize);
+			fflush (stdout);
+
+#ifdef LOGVOL_PROFILING
+			{
+				char *_env_str = getenv ("H5VL_LOG_SHOW_PROFILING_INFO");
+				if (_env_str != NULL && *_env_str != '0') {
+					if (fp->rank == 0) {
+						printf ("MPI hint at metadata flush: \n");
+						fflush (stdout);
+					}
+					H5VL_log_profile_print (fp);
+				}
+			}
+#endif
+			MPI_Barrier (fp->comm);
+			H5VL_LOGI_PROFILING_TIMER_START;  // TIMER_H5VL_LOG_FILEI_METAFLUSH_WRITE
+			err = MPI_File_write_at_all (fp->fh, mdoff + rbuf[0], MPI_BOTTOM, 1, mmtype, &stat);
+			CHECK_MPIERR
+			H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_WRITE);
+
+			free (tbuf);
+		}
+		MPI_Barrier (fp->comm);
 
 		H5VL_LOGI_PROFILING_TIMER_START;
 		// This barrier is required to ensure no process read metadata before everyone finishes
