@@ -588,16 +588,19 @@ herr_t H5VL_log_nb_flush_write_reqs (void *file, hid_t dxplid) {
 
 				// Write the data
 #ifdef LOGVOL_PROFILING
-				{
-					char *_env_str = getenv ("H5VL_LOG_SHOW_PROFILING_INFO");
-					if (_env_str != NULL && *_env_str != '0') {
-						if (fp->rank == 0) {
-							printf ("MPI hint at metadata flush: \n");
-							fflush (stdout);
-						}
-						H5VL_log_profile_print (fp);
+			{
+				MPI_Info info;
+				char *_env_str = getenv ("H5VL_LOG_PRINT_MPI_INFO");
+				if (_env_str != NULL && *_env_str != '0') {
+					if (fp->rank == 0) {
+						MPI_File_get_info (fp->fh, &info);
+						printf ("MPI hint at data flush: \n");
+						fflush (stdout);
+						H5VL_logi_print_hint (&info);
+						MPI_Info_free (&info);
 					}
 				}
+			}
 #endif
 				MPI_Barrier (fp->comm);
 

@@ -382,27 +382,6 @@ err_out:;
 	return err;
 }
 
-static inline void print_info (MPI_Info *info_used) {
-	int i, nkeys;
-
-	if (*info_used == MPI_INFO_NULL) {
-		printf ("MPI File Info is NULL\n");
-		return;
-	}
-	MPI_Info_get_nkeys (*info_used, &nkeys);
-	printf ("MPI File Info: nkeys = %d\n", nkeys);
-	for (i = 0; i < nkeys; i++) {
-		char key[MPI_MAX_INFO_KEY], value[MPI_MAX_INFO_VAL];
-		int valuelen, flag;
-
-		MPI_Info_get_nthkey (*info_used, i, key);
-		MPI_Info_get_valuelen (*info_used, key, &valuelen, &flag);
-		MPI_Info_get (*info_used, key, valuelen + 1, value, &flag);
-		printf ("MPI File Info: [%2d] key = %25s, value = %s\n", i, key, value);
-	}
-	printf ("-----------------------------------------------------------\n");
-}
-
 herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	herr_t err = 0;
 	int mpierr;
@@ -477,7 +456,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 		if (_env_str != NULL && *_env_str != '0') {
 			if (fp->rank == 0) {
 				MPI_File_get_info (fp->fh, &info);
-				print_info (&info);
+				H5VL_logi_print_hint (&info);
 				MPI_Info_free (&info);
 			}
 		}

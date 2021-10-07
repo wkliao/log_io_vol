@@ -31,3 +31,5 @@ extern herr_t H5VL_logi_get_att_ex (
 	H5VL_log_obj_t *op, const char *name, hid_t mtype, hsize_t *len, void *buf, hid_t dxpl_id);
 
 MPI_Datatype H5VL_logi_get_mpi_type_by_size (size_t size);
+
+void H5VL_logi_print_hint (MPI_Info *info_used);

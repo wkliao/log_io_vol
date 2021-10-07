@@ -17,6 +17,7 @@
 #include "H5VL_logi_err.hpp"
 #include "H5VL_logi_wrapper.hpp"
 #include "H5VL_logi_zip.hpp"
+#include "H5VL_logi_util.hpp"
 
 // A hash function used to hash a pair of any kind
 struct hash_pair {
@@ -326,13 +327,16 @@ herr_t H5VL_log_filei_metaflush (H5VL_log_file_t *fp) {
 
 #ifdef LOGVOL_PROFILING
 			{
-				char *_env_str = getenv ("H5VL_LOG_SHOW_PROFILING_INFO");
+				MPI_Info info;
+				char *_env_str = getenv ("H5VL_LOG_PRINT_MPI_INFO");
 				if (_env_str != NULL && *_env_str != '0') {
 					if (fp->rank == 0) {
+						MPI_File_get_info (fp->fh, &info);
 						printf ("MPI hint at metadata flush: \n");
 						fflush (stdout);
+						H5VL_logi_print_hint (&info);
+						MPI_Info_free (&info);
 					}
-					H5VL_log_profile_print (fp);
 				}
 			}
 #endif
