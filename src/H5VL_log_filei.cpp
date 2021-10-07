@@ -436,7 +436,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 		t2 = MPI_Wtime ();
 
 		if (fp->rank == 0) {
-			printf ("Flush before metadata flush: %lf\n", t2 - t1);
+			printf ("#+$: flush_before_metadata_flush: %lf\n", t2 - t1);
 			fflush (stdout);
 		}
 	}
@@ -508,7 +508,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 		t2 = MPI_Wtime ();
 
 		if (fp->rank == 0) {
-			printf ("Flush before file close: %lf\n", t2 - t1);
+			printf ("#+$: flush_after_metadata_flush: %lf\n", t2 - t1);
 			fflush (stdout);
 		}
 	}
