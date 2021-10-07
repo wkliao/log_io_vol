@@ -426,6 +426,20 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	}
 #endif
 
+	{
+		double t1, t2;
+
+		MPI_Barrier (MPI_COMM_WORLD);
+		t1	= MPI_Wtime ();
+		err = H5VL_log_filei_flush (fp, fp->dxplid);
+		CHECK_ERR
+		t2 = MPI_Wtime ();
+
+		if (fp->rank == 0) {
+			printf ("Flush before metadata flush: %lf\n", t2 - t1);
+			fflush (stdout);
+		}
+	}
 	if (fp->flag != H5F_ACC_RDONLY) {
 		// Flush write requests
 		if (fp->wreqs.size () > fp->nflushed) {
@@ -484,6 +498,20 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	H5VL_log_dataspace_contig_ref--;
 	if (H5VL_log_dataspace_contig_ref == 0) { H5Sclose (H5VL_log_dataspace_contig); }
 
+	{
+		double t1, t2;
+
+		MPI_Barrier (MPI_COMM_WORLD);
+		t1	= MPI_Wtime ();
+		err = H5VL_log_filei_flush (fp, fp->dxplid);
+		CHECK_ERR
+		t2 = MPI_Wtime ();
+
+		if (fp->rank == 0) {
+			printf ("Flush before file close: %lf\n", t2 - t1);
+			fflush (stdout);
+		}
+	}
 	// Close the file with under VOL
 	H5VL_LOGI_PROFILING_TIMER_START;
 	err = H5VLfile_close (fp->uo, fp->uvlid, H5P_DATASET_XFER_DEFAULT, NULL);
