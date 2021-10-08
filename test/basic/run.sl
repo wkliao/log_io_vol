@@ -15,8 +15,11 @@ OUTFILE=/gpfs/alpine/csc332/scratch/khl7265/FS_EVAL/e3sm/output/test.bin
 for i in $(seq 3);
 do
     echo "===================================== Run ${i} ====================================="
-    echo "rm ${OUTFILE}"
-    rm ${OUTFILE}
+    >&2 echo "===================================== Run ${i} ====================================="
+    echo "rm -f ${OUTFILE}"
+    rm -f ${OUTFILE}
     echo "jsrun -X 1 -p ${NP} -n ${NN} -r 1 -d plane:42 -c 42 -g 0 -b packed:smt:1 -l cpu-cpu --stdio_mode collected ./mpiio_test ${OUTFILE}"
     jsrun -X 1 -p ${NP} -n ${NN} -r 1 -d plane:42 -c 42 -g 0 -b packed:smt:1 -l cpu-cpu --stdio_mode collected ./mpiio_test ${OUTFILE}
+    echo "ls -lat ${OUTFILE}"
+    ls -lat ${OUTFILE}
 done

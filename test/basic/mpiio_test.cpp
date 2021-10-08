@@ -10,9 +10,6 @@
 			char errstr[256];                                                    \
 			MPI_Error_string (err, errstr, &el);                                 \
 			printf ("Error at line %d in %s: %s\n", __LINE__, __FILE__, errstr); \
-			err = -1;                                                            \
-			abort ();                                                            \
-			goto err_out;                                                        \
 		}                                                                        \
 	}
 
@@ -20,9 +17,6 @@
 	{                                                                 \
 		if (A == NULL) {                                              \
 			printf ("Error at line %d in %s:\n", __LINE__, __FILE__); \
-			err = -1;                                                 \
-			abort ();                                                 \
-			goto err_out;                                             \
 		}                                                             \
 	}
 
