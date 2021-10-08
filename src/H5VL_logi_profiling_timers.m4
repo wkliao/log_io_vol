@@ -77,6 +77,7 @@ define(`H5VL_LOG_TIMERS', `( `H5VL_log_file_create', dnl
                             `H5VL_log_filei_metaflush_pack', dnl
                             `H5VL_log_filei_metaflush_zip', dnl
                             `H5VL_log_filei_metaflush_sync', dnl
+                            `H5VL_log_filei_metaflush_sync_size', dnl
                             `H5VL_log_filei_metaflush_create', dnl
                             `H5VL_log_filei_metaflush_write', dnl
                             `H5VL_log_filei_metaflush_close', dnl
@@ -96,12 +97,13 @@ define(`H5VL_LOG_TIMERS', `( `H5VL_log_file_create', dnl
                             `H5VL_log_nb_flush_write_reqs', dnl
                             `H5VL_log_nb_flush_write_reqs_init', dnl
                             `H5VL_log_nb_flush_write_reqs_sync', dnl
+                            `H5VL_log_nb_flush_write_reqs_sync_size', dnl
+                            `H5VL_log_nb_flush_write_reqs_size', dnl
                             `H5VL_log_nb_flush_write_reqs_create', dnl
                             `H5VL_log_nb_flush_write_reqs_wr', dnl
                             `H5VL_log_nb_flush_write_reqs_pack', dnl
                             `H5VL_log_nb_flush_write_reqs_create_virtual', dnl
                             `H5VL_log_nb_write_reqs_aligned', dnl
-                            `H5VL_log_nb_flush_write_reqs_size', dnl
 )')`'dnl
 
 

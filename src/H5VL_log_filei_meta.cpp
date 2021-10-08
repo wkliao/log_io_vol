@@ -270,6 +270,15 @@ herr_t H5VL_log_filei_metaflush (H5VL_log_file_t *fp) {
 	// CHECK_MPIERR
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_SYNC);
 
+#ifdef LOGVOL_PROFILING
+	{
+		int tmp;
+		MPI_Comm_size (fp->group_comm, &tmp);
+		H5VL_log_profile_add_time (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_SYNC_SIZE,
+								   (double)(tmp * 3));
+	}
+#endif
+
 	// Where to create data dataset, main file or subfile
 	loc.type = H5VL_OBJECT_BY_SELF;
 	if (fp->config & H5VL_FILEI_CONFIG_SUBFILING) {

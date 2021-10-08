@@ -536,6 +536,19 @@ herr_t H5VL_log_nb_flush_write_reqs (void *file, hid_t dxplid) {
 	}
 
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_NB_FLUSH_WRITE_REQS_SYNC);
+#ifdef LOGVOL_PROFILING
+	{
+		int tmp;
+		MPI_Comm_size (fp->comm, &tmp);
+		H5VL_log_profile_add_time (fp, TIMER_H5VL_LOG_NB_FLUSH_WRITE_REQS_SYNC_SIZE,
+								   (double)(tmp * 2));
+		if (fp->config & H5VL_FILEI_CONFIG_SUBFILING) {
+			MPI_Comm_size (fp->group_comm, &tmp);
+			H5VL_log_profile_add_time (fp, TIMER_H5VL_LOG_NB_FLUSH_WRITE_REQS_SYNC_SIZE,
+									   (double)(tmp * 2));
+		}
+	}
+#endif
 
 	// Write out the data
 	if (fsize_all) {
