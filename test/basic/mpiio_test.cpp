@@ -20,8 +20,8 @@
 		}                                                             \
 	}
 
-// static MPI_Offset dsize[] = {15125911000, 405489372, 7172607130, 2962928490};
-static MPI_Offset dsize[] = {128, 256, 512, 1024};
+static MPI_Offset dsize[] = {15125911000, 405489372, 7172607130, 2962928490};
+//static MPI_Offset dsize[] = {128, 256, 512, 1024};
 
 int main (int argc, char **argv) {
 	int err = 0;
@@ -49,6 +49,8 @@ int main (int argc, char **argv) {
 	} else {
 		file_name = "test.bin";
 	}
+
+	if (rank == 0) { printf ("Writing to file: %s\n", file_name); }
 
 	MPI_Barrier (MPI_COMM_WORLD);
 	t3	= MPI_Wtime ();
@@ -99,6 +101,7 @@ int main (int argc, char **argv) {
 	t4 = MPI_Wtime ();
 	if (rank == 0) { printf ("#%%$: End to end time: %lf\n", t4 - t3); }
 err_out:;
+	fflush(stdout);
 	MPI_Finalize ();
 	return err == 0;
 }
