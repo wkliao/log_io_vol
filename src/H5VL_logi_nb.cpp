@@ -595,9 +595,11 @@ herr_t H5VL_log_nb_flush_write_reqs (void *file, hid_t dxplid) {
 				CHECK_MPIERR
 				H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_NB_FLUSH_WRITE_REQS_PACK);
 
+				/*
 				printf ("Rank %d: off = %lld, size = %d, end=%lld\n", fp->rank, foff_group + doff,
 						wsize, foff_group + doff + wsize);
 				fflush (stdout);
+				*/
 
 				// Write the data
 #ifdef LOGVOL_PROFILING

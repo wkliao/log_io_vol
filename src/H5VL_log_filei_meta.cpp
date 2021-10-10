@@ -329,10 +329,12 @@ herr_t H5VL_log_filei_metaflush (H5VL_log_file_t *fp) {
 			mpierr = MPI_Pack (MPI_BOTTOM, 1, mmtype, tbuf, wsize, &pos, fp->comm);
 			CHECK_MPIERR
 			H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILEI_METAFLUSH_PACK);
-
+			
+			/*
 			printf ("Rank %d: off = %lld, size = %d, end=%lld\n", fp->rank, mdoff + rbuf[0], wsize,
 					mdoff + rbuf[0] + wsize);
 			fflush (stdout);
+			*/
 
 #ifdef LOGVOL_PROFILING
 			{
