@@ -6,6 +6,7 @@
 // Sys hdrs
 #include <sys/stat.h>
 #include <unistd.h>
+#include <mpip.h>
 // Logvol hdrs
 #include "H5VL_log.h"
 #include "H5VL_log_file.hpp"
@@ -493,14 +494,23 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	}
 	// Close the file with under VOL
 	H5VL_LOGI_PROFILING_TIMER_START;
+	if (fp->rank == 0) {
+		printf ("Turn on MPIP verbose mode for file closing\n");
+		fflush (stdout);
+	}
+	mpip_set_verbose (2);
 	err = H5VLfile_close (fp->uo, fp->uvlid, H5P_DATASET_XFER_DEFAULT, NULL);
+	if (fp->rank == 0) {
+		printf ("Turn off MPIP verbose mode for file closing\n");
+		fflush (stdout);
+	}
+	mpip_set_verbose (0);
 	CHECK_ERR
 	if (fp->sfp) {
 		err = H5VLfile_close (fp->sfp, fp->uvlid, H5P_DATASET_XFER_DEFAULT, NULL);
 		CHECK_ERR
 	}
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VLFILE_CLOSE);
-
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILE_CLOSE);
 
 #ifdef LOGVOL_PROFILING

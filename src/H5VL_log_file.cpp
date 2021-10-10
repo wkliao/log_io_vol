@@ -3,6 +3,7 @@
 #endif
 
 #include <fcntl.h>
+#include <mpip.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -143,8 +144,19 @@ void *H5VL_log_file_create (
 	CHECK_ERR
 	err = H5Pset_alignment (under_fapl_id, 4096, 4096);
 	CHECK_ERR
+
 	H5VL_LOGI_PROFILING_TIMER_START;
+	if (fp->rank == 0) {
+		printf ("Turn on MPIP verbose mode for file closing\n");
+		fflush (stdout);
+	}
+	mpip_set_verbose (2);
 	fp->uo = H5VLfile_create (name, flags, fcpl_id, under_fapl_id, dxpl_id, NULL);
+	if (fp->rank == 0) {
+		printf ("Turn off MPIP verbose mode for file closing\n");
+		fflush (stdout);
+	}
+	mpip_set_verbose (0);
 	CHECK_PTR (fp->uo)
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VLFILE_CREATE);
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILE_CREATE_FILE);

@@ -388,6 +388,46 @@ if test "x$enable_zlib" = "xyes" ; then
    AC_DEFINE(ENABLE_ZLIB)
 fi
 
+AC_ARG_WITH([mpip],
+   [AS_HELP_STRING([--with-mpip=/path/to/hdf5], [Specify mpip installation path(s):
+    --with-mpip=INC,LIB for include directory and library directory separated by a comma
+    --with-mpip=DIR for directory containing include/ and lib/ subdirectories
+   ])], [
+   case $withval in
+     *,*)
+        mpip_inc="`echo $withval |cut -f1 -d,`"
+        mpip_lib="`echo $withval |cut -f2 -d, -s`"
+        ;;
+     *)
+        if test -n "$withval"; then
+          mpip_inc="$withval/include"
+          mpip_lib="$withval/lib"
+        fi
+        ;;
+   esac
+   if test "x$mpip_inc" != x ; then
+      if test "x$CPPFLAGS" = x ; then
+         CPPFLAGS="-I$mpip_inc"
+      elif ! echo "${CPPFLAGS}" | ${EGREP} -q -w -- "-I$mpip_inc" ; then
+         # append only if not already appear in CPPFLAGS
+         CPPFLAGS="$CPPFLAGS -I$mpip_inc"
+      fi
+   fi
+   if test "x$mpip_lib" != x ; then
+      if test "x$LDFLAGS" = x ; then
+         LDFLAGS="-L$mpip_lib"
+      elif ! echo "${LDFLAGS}" | ${EGREP} -q -w -- "-L$mpip_lib" ; then
+         # append only if not already appear in LDFLAGS
+         LDFLAGS="$LDFLAGS -L$mpip_lib"
+      fi
+   fi
+   if test "x$LIBS" = x ; then
+      LIBS="-lmpip"
+   else
+      LIBS="$LIBS -lmpip"
+   fi
+])
+
 AC_LANG_POP(C++)
 
 if test "x$LIBS" = x ; then
