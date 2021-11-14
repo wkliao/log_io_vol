@@ -3,9 +3,10 @@
 #endif
 // Std hdrs
 #include <array>
-#include <cstring>
 #include <cassert>
+#include <cstring>
 // Sys hdrs
+#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
 // Logvol hdrs
@@ -52,20 +53,12 @@ err_out:;
 
 herr_t H5VL_log_filei_post_open (H5VL_log_file_t *fp) {
 	herr_t err = 0;
+	int mpierr;
 	H5VL_loc_params_t loc;
 	H5VL_object_specific_args_t args;
 	int attbuf[4];
 
 	H5VL_LOGI_PROFILING_TIMER_START;
-
-	// Open the LOG group
-	loc.obj_type = H5I_FILE;
-	loc.type	 = H5VL_OBJECT_BY_SELF;
-	H5VL_LOGI_PROFILING_TIMER_START
-	fp->lgp = H5VLgroup_open (fp->uo, &loc, fp->uvlid, LOG_GROUP_NAME, H5P_GROUP_ACCESS_DEFAULT,
-							  fp->dxplid, NULL);
-	CHECK_PTR (fp->lgp)
-	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VLGROUP_OPEN);
 
 	// Att
 	err = H5VL_logi_get_att (fp, "_int_att", H5T_NATIVE_INT32, attbuf, fp->dxplid);
@@ -74,6 +67,7 @@ herr_t H5VL_log_filei_post_open (H5VL_log_file_t *fp) {
 	fp->nldset = attbuf[1];
 	fp->nmdset = attbuf[2];
 	fp->config = attbuf[3];
+	fp->ngroup = attbuf[3];
 	fp->idx.resize (fp->ndset);
 	fp->mreqs.resize (fp->ndset);
 	fp->dsets.resize (fp->ndset);
@@ -478,7 +472,7 @@ static inline void print_info (MPI_Info *info_used) {
 herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	herr_t err = 0;
 	int mpierr;
-	int attbuf[4];
+	int attbuf[5];
 
 	H5VL_LOGI_PROFILING_TIMER_START;
 
@@ -518,11 +512,9 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 		attbuf[1] = fp->nldset;
 		attbuf[2] = fp->nmdset;
 		attbuf[3] = fp->config;
+		attbuf[4] = fp->ngroup;
 		// Att in the subfile
 		if (fp->sfp && fp->sfp != fp->uo) {
-			attbuf[0] = fp->ndset;
-			attbuf[1] = fp->nldset;
-			attbuf[2] = fp->nmdset;
 			attbuf[3] =
 				fp->config & !(H5VL_FILEI_CONFIG_SUBFILING);  // No subfiling flag in a subfile
 			err = H5VL_logi_put_att (fp->sfp, fp->uvlid, H5I_FILE, "_int_att", H5T_NATIVE_INT32,
@@ -593,6 +585,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	if (fp->group_comm != fp->comm) { MPI_Comm_free (&(fp->group_comm)); }
 	MPI_Comm_free (&(fp->comm));
 	H5Pclose (fp->dxplid);
+	H5Pclose (fp->ufaplid);
 
 	delete fp;
 
@@ -630,7 +623,7 @@ herr_t H5VL_log_filei_create_subfile (H5VL_log_file_t *fp,
 									  hid_t fapl_id,
 									  hid_t dxpl_id) {
 	herr_t err = 0;
-	int attbuf[4];
+	int attbuf[5];
 	int stat;
 
 	// Create subfile dir
@@ -657,9 +650,51 @@ herr_t H5VL_log_filei_create_subfile (H5VL_log_file_t *fp,
 	attbuf[1] = fp->nldset;
 	attbuf[2] = fp->nmdset;
 	attbuf[3] = fp->config & !(H5VL_FILEI_CONFIG_SUBFILING);  // No subfiling flag in a subfile
+	attbuf[4] = fp->ngroup;
 	err		  = H5VL_logi_add_att (fp->sfp, fp->uvlid, H5I_FILE, "_int_att", H5T_STD_I32LE,
 							   H5T_NATIVE_INT32, 4, attbuf, dxpl_id, NULL);
 	CHECK_ERR
+
+err_out:;
+	return err;
+}
+
+herr_t H5VL_log_filei_open_subfile (H5VL_log_file_t *fp,
+									unsigned flags,
+									hid_t fapl_id,
+									hid_t dxpl_id) {
+	herr_t err = 0;
+	int attbuf[5];
+	int stat;
+
+	// Open subfile dir
+	if (fp->rank == 0) {
+		DIR *dir;
+		dir = opendir ((fp->name + ".subfiles").c_str ());
+		if (dir) {
+			closedir (dir);
+			stat = 0;
+		} else {
+			stat = -1;
+		}
+	}
+	MPI_Bcast (&stat, 1, MPI_INT, 0, fp->comm);
+	if (stat != 0) { RET_ERR ("Cannot open subfile dir") }
+
+	// Create the subfiles with underlying VOL
+	err = H5Pset_fapl_mpio (fapl_id, fp->group_comm, MPI_INFO_NULL);
+	CHECK_ERR
+	H5VL_LOGI_PROFILING_TIMER_START;
+	fp->subname = fp->name + ".subfiles/" + std::to_string (fp->group_id) + ".h5";
+	fp->sfp		= H5VLfile_open (fp->subname.c_str (), flags, fapl_id, dxpl_id, NULL);
+	CHECK_PTR (fp->sfp)
+	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VLFILE_CREATE);
+
+	// Att
+	err = H5VL_logi_get_att (fp, "_int_att", H5T_NATIVE_INT32, attbuf, fp->dxplid);
+	CHECK_ERR
+	fp->nldset = attbuf[1];
+	fp->nmdset = attbuf[2];
 
 err_out:;
 	return err;
