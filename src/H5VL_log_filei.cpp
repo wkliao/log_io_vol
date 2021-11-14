@@ -55,8 +55,7 @@ herr_t H5VL_log_filei_post_open (H5VL_log_file_t *fp) {
 	herr_t err = 0;
 	int mpierr;
 	H5VL_loc_params_t loc;
-	H5VL_object_specific_args_t args;
-	int attbuf[4];
+	int attbuf[5];
 
 	H5VL_LOGI_PROFILING_TIMER_START;
 
@@ -75,6 +74,7 @@ herr_t H5VL_log_filei_post_open (H5VL_log_file_t *fp) {
 	fp->group_comm = fp->comm;
 	fp->group_id   = 0;
 
+<<<<<<< HEAD
 	// Visit all dataasets for info
 	args.op_type			 = H5VL_OBJECT_VISIT;
 	args.args.visit.idx_type = H5_INDEX_CRT_ORDER;
@@ -85,6 +85,25 @@ herr_t H5VL_log_filei_post_open (H5VL_log_file_t *fp) {
 	err = H5VLobject_specific (fp->uo, &loc, fp->uvlid, &args, fp->dxplid, NULL);
 	CHECK_ERR
 	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILE_OPEN);
+=======
+	H5VL_LOGI_PROFILING_TIMER_START;
+	if (fp->config & H5VL_FILEI_CONFIG_SUBFILING) {
+		err = H5VL_log_filei_calc_node_rank (fp);
+		CHECK_ERR
+	} else {
+		fp->group_rank = fp->rank;
+		fp->group_np   = fp->np;
+		fp->group_comm = fp->comm;
+		fp->group_id   = 0;
+		fp->ngroup	   = 1;
+	}
+	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILE_OPEN_GROUP_RANK);
+
+	H5VL_LOGI_PROFILING_TIMER_START;
+	if (fp->config & H5VL_FILEI_CONFIG_SUBFILING) {
+		// Aligned write not supported in subfiles
+		fp->config &= ~H5VL_FILEI_CONFIG_DATA_ALIGN;
+>>>>>>> iterate through all subfiles when handling read requests
 
 err_out:;
 	return err;
@@ -97,10 +116,20 @@ herr_t H5VL_log_filei_dset_visit (hid_t o_id,
 	herr_t err = 0;
 	hid_t did  = -1;  // Target dataset ID
 
+<<<<<<< HEAD
 	// Skip unnamed and hidden object
 	if ((name == NULL) || (name[0] == '_') || (name[0] == '/' || (name[0] == '.'))) {
 		goto err_out;
 	}
+=======
+	// Open the file with MPI
+	H5VL_LOGI_PROFILING_TIMER_START;
+	mpierr =
+		MPI_File_open (fp->group_comm, fp->subname.c_str (), MPI_MODE_RDWR, fp->info, &(fp->fh));
+
+	H5VL_LOGI_PROFILING_TIMER_STOP (fp, TIMER_H5VL_LOG_FILE_CREATE_FH);
+	CHECK_MPIERR
+>>>>>>> iterate through all subfiles when handling read requests
 
 	// Open the dataset so that the dset metadata is cached in the file
 	if (object_info->type == H5O_TYPE_DATASET) {
@@ -584,6 +613,7 @@ herr_t H5VL_log_filei_close (H5VL_log_file_t *fp) {
 	// Clean up
 	if (fp->group_comm != fp->comm) { MPI_Comm_free (&(fp->group_comm)); }
 	MPI_Comm_free (&(fp->comm));
+	MPI_Info_free (&(fp->info));
 	H5Pclose (fp->dxplid);
 	H5Pclose (fp->ufaplid);
 
