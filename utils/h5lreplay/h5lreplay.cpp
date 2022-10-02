@@ -150,15 +150,16 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     int att_buf[H5VL_LOG_FILEI_NATTR];    // Temporary buffer for reading file attributes
     h5lreplay_copy_handler_arg copy_arg;  // File structure
     std::vector<h5lreplay_idx_t>
-        reqs;                          // Requests recorded in the current file (main file| subfile)
-    MPI_File fin  = MPI_FILE_NULL;     // file handle of the input file
-    MPI_File fout = MPI_FILE_NULL;     // file handle of the output file
-    MPI_File fsub = MPI_FILE_NULL;     // file handle of the subfile
-    int nsubfiles;                     // number of subfiles
-    int nnode;                         // number of nodes replaying the file
-    int subid;                         // id of the node
-    int subrank;                       // rank within the node
-    int subnp;                         // number of processes within the node
+        reqs;                       // Requests recorded in the current file (main file| subfile)
+    MPI_File fin  = MPI_FILE_NULL;  // file handle of the input file
+    MPI_File fout = MPI_FILE_NULL;  // file handle of the output file
+    MPI_File fsub = MPI_FILE_NULL;  // file handle of the subfile
+    int nsubfiles;                  // number of subfiles
+    int nnode;                      // number of nodes replaying the file
+    int subid;                      // id of the node
+    int subrank;                    // rank within the node
+    int subnp;                      // number of processes within the node
+    double t[6], t1, t2;
     MPI_Comm subcomm = MPI_COMM_NULL;  // communicator within the node
     H5VL_logi_err_finally finally ([&] () -> void {
         if (faplid >= 0) { H5Pclose (faplid); }
@@ -174,6 +175,9 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         if (fout != MPI_FILE_NULL) { MPI_File_close (&fout); }
         if (subcomm != MPI_COMM_NULL) { MPI_Comm_free (&subcomm); }
     });
+
+    MPI_Barrier (MPI_COMM_WORLD);
+    t[0] = MPI_Wtime ();
 
     // Open the input and output file
     nativevlid = H5VLpeek_connector_id_by_name ("native");
@@ -209,6 +213,9 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     nmdset = att_buf[2];
     config = att_buf[3];
 
+    MPI_Barrier (MPI_COMM_WORLD);
+    t[1] = MPI_Wtime ();
+
     // Copy attributes
     n   = 0;
     err = H5Aiterate2 (finid, H5_INDEX_NAME, H5_ITER_INC, &n, h5lreplay_attr_copy_handler,
@@ -221,6 +228,10 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     err = H5Ovisit3 (finid, H5_INDEX_CRT_ORDER, H5_ITER_INC, h5lreplay_copy_handler, &copy_arg,
                      H5O_INFO_ALL);
     CHECK_ERR
+
+    MPI_Barrier (MPI_COMM_WORLD);
+    t[2] = MPI_Wtime ();
+    t[4] = t[5] = 0;
 
     reqs.resize (ndset);
     if (config & H5VL_FILEI_CONFIG_SUBFILING) {
@@ -270,15 +281,26 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 lgid = H5Gopen2 (fsubid, H5VL_LOG_FILEI_GROUP_LOG, H5P_DEFAULT);
                 CHECK_ID (lgid)
 
+                MPI_Barrier (subcomm);
+                t1 = MPI_Wtime ();
+
                 // Read the metadata
                 h5lreplay_parse_meta (subrank, subnp, lgid, nmdset, copy_arg.dsets, reqs, config);
 
+                MPI_Barrier (subcomm);
+                t2 = MPI_Wtime ();
+                t[4] += t2 - t1;
+
                 // Read the data
                 h5lreplay_read_data (fsub, copy_arg.dsets, reqs);
+
+                MPI_Barrier (subcomm);
+                t1 = MPI_Wtime ();
+                t[5] += t1 - t2;
             }
 
             // Write the data
-            h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
+            // h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
 
             if (i + subid < nsubfiles) {
                 // Close the subfile
@@ -297,13 +319,35 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         lgid = H5Gopen2 (finid, H5VL_LOG_FILEI_GROUP_LOG, H5P_DEFAULT);
         CHECK_ID (lgid)
 
+        MPI_Barrier (subcomm);
+        t1 = MPI_Wtime ();
+
         // Read the metadata
         h5lreplay_parse_meta (rank, np, lgid, nmdset, copy_arg.dsets, reqs, config);
+
+        MPI_Barrier (subcomm);
+        t2 = MPI_Wtime ();
+        t[4] += t2 - t1;
 
         // Read the data
         h5lreplay_read_data (fin, copy_arg.dsets, reqs);
 
+        MPI_Barrier (subcomm);
+        t1 = MPI_Wtime ();
+        t[5] += t1 - t2;
+
         // Write the data
-        h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
+        // h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
+    }
+    MPI_Barrier (MPI_COMM_WORLD);
+    t[3] = MPI_Wtime ();
+
+    if (!rank) {
+        printf ("open_time: %lf\n", t[1] - t[0]);
+        printf ("hdr_time: %lf\n", t[2] - t[1]);
+        printf ("read_time: %lf\n", t[3] - t[2]);
+        printf ("read_meta_time: %lf\n", t[4]);
+        printf ("read_data_time: %lf\n", t[5]);
+        printf ("e2e_time: %lf\n", t[3] - t[0]);
     }
 }
