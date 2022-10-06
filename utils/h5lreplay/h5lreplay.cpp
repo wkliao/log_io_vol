@@ -319,20 +319,20 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         lgid = H5Gopen2 (finid, H5VL_LOG_FILEI_GROUP_LOG, H5P_DEFAULT);
         CHECK_ID (lgid)
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t1 = MPI_Wtime ();
 
         // Read the metadata
         h5lreplay_parse_meta (rank, np, lgid, nmdset, copy_arg.dsets, reqs, config);
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t2 = MPI_Wtime ();
         t[4] += t2 - t1;
 
         // Read the data
         h5lreplay_read_data (fin, copy_arg.dsets, reqs);
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t1 = MPI_Wtime ();
         t[5] += t1 - t2;
 

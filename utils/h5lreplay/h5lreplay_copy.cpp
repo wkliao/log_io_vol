@@ -100,6 +100,8 @@ herr_t h5lreplay_copy_handler (hid_t o_id,
             // Create dst dataset
             err = H5Pset_layout (dcplid, H5D_CONTIGUOUS);
             CHECK_ERR
+            err = H5Pset_fill_time (dcplid, H5D_FILL_TIME_NEVER);
+            CHECK_ERR
             sid = H5Screate_simple (ndim, dims, dims);
             CHECK_ID (sid)
             dst_id = H5Dcreate2 (argp->fid, name, tid, sid, H5P_DEFAULT, dcplid, H5P_DEFAULT);
