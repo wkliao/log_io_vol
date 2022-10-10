@@ -32,8 +32,29 @@ typedef struct hidx {
     int len;
     bool operator< (const struct hidx &rhs) const { return foff < rhs.foff; }
 } hidx;
+/*----< print_info() >------------------------------------------------------*/
+void print_info (MPI_Info *info_used) {
+    int i, nkeys;
 
-void h5lreplay_read_data (MPI_File fin,
+    if (*info_used == MPI_INFO_NULL) {
+        printf ("MPI File Info is NULL\n");
+        return;
+    }
+    MPI_Info_get_nkeys (*info_used, &nkeys);
+    printf ("MPI File Info: nkeys = %d\n", nkeys);
+    for (i = 0; i < nkeys; i++) {
+        char key[MPI_MAX_INFO_KEY], value[MPI_MAX_INFO_VAL];
+        int valuelen, flag;
+
+        MPI_Info_get_nthkey (*info_used, i, key);
+        MPI_Info_get_valuelen (*info_used, key, &valuelen, &flag);
+        MPI_Info_get (*info_used, key, valuelen + 1, value, &flag);
+        printf ("MPI File Info: [%2d] key = %25s, value = %s\n", i, key, value);
+    }
+    printf("-----------------------------------------------------------\n");
+}
+void h5lreplay_read_data (MPI_Comm comm,
+                          MPI_File fin,
                           std::vector<dset_info> &dsets,
                           std::vector<h5lreplay_idx_t> &reqs) {
     herr_t err = 0;
@@ -106,8 +127,28 @@ void h5lreplay_read_data (MPI_File fin,
     CHECK_MPIERR
     mpierr = MPI_File_set_view (fin, 0, MPI_BYTE, ftype, "native", MPI_INFO_NULL);
     CHECK_MPIERR
-    mpierr = MPI_File_read_all (fin, MPI_BOTTOM, 1, mtype, &stat);
-    CHECK_MPIERR
+
+    {
+        int rank;
+        MPI_Info info;
+
+        MPI_Barrier(comm);
+        double t = MPI_Wtime ();
+        mpierr   = MPI_File_read_all (fin, MPI_BOTTOM, 1, mtype, &stat);
+        CHECK_MPIERR
+        MPI_Barrier(comm);
+        t = MPI_Wtime () - t;
+
+        MPI_Comm_rank(comm,&rank);
+
+        if (rank == 0){
+            printf ("MPI_File_read_all_time: %lf\n", t);
+            
+            MPI_File_get_info(fin,&info);
+            print_info(&info);
+            MPI_Info_free(&info);
+        }
+    }
 
     // Unfilter the data
     for (auto &reqp : reqs) {

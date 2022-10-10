@@ -292,7 +292,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 t[4] += t2 - t1;
 
                 // Read the data
-                h5lreplay_read_data (fsub, copy_arg.dsets, reqs);
+                h5lreplay_read_data (subcomm, fsub, copy_arg.dsets, reqs);
 
                 MPI_Barrier (subcomm);
                 t1 = MPI_Wtime ();
@@ -330,7 +330,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         t[4] += t2 - t1;
 
         // Read the data
-        h5lreplay_read_data (fin, copy_arg.dsets, reqs);
+        h5lreplay_read_data (MPI_COMM_WORLD, fin, copy_arg.dsets, reqs);
 
         MPI_Barrier (MPI_COMM_WORLD);
         t1 = MPI_Wtime ();

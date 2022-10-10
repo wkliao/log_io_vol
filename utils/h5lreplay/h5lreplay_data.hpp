@@ -10,7 +10,8 @@
 
 #include "h5lreplay_meta.hpp"
 
-void h5lreplay_read_data (MPI_File fin,
+void h5lreplay_read_data (MPI_Comm comm,
+                          MPI_File fin,
                           std::vector<dset_info> &dsets,
                           std::vector<h5lreplay_idx_t> &reqs);
 
