@@ -51,7 +51,7 @@ void print_info (MPI_Info *info_used) {
         MPI_Info_get (*info_used, key, valuelen + 1, value, &flag);
         printf ("MPI File Info: [%2d] key = %25s, value = %s\n", i, key, value);
     }
-    printf("-----------------------------------------------------------\n");
+    printf ("-----------------------------------------------------------\n");
 }
 void h5lreplay_read_data (MPI_Comm comm,
                           MPI_File fin,
@@ -74,7 +74,11 @@ void h5lreplay_read_data (MPI_Comm comm,
         if (ftype != MPI_DATATYPE_NULL) { MPI_Type_free (&ftype); }
         if (mtype != MPI_DATATYPE_NULL) { MPI_Type_free (&mtype); }
     });
+    double t[5];
+    int rank;
+    MPI_Info info;
 
+    t[0] = MPI_Wtime ();
     // Allocate buffer
     zbsize = 0;
     for (auto &reqp : reqs) {
@@ -105,6 +109,7 @@ void h5lreplay_read_data (MPI_Comm comm,
     }
     // zbuf = (char *)malloc (zbsize);
 
+    t[1] = MPI_Wtime ();
     // Read the data
     foffs.reserve (idxs.size ());
     moffs.reserve (idxs.size ());
@@ -127,27 +132,24 @@ void h5lreplay_read_data (MPI_Comm comm,
     CHECK_MPIERR
     mpierr = MPI_File_set_view (fin, 0, MPI_BYTE, ftype, "native", MPI_INFO_NULL);
     CHECK_MPIERR
+    t[2] = MPI_Wtime ();
 
-    {
-        int rank;
-        MPI_Info info;
+    MPI_Barrier (comm);
+    t[3]   = MPI_Wtime ();
+    mpierr = MPI_File_read_all (fin, MPI_BOTTOM, 1, mtype, &stat);
+    CHECK_MPIERR
+    MPI_Barrier (comm);
+    t[4] = MPI_Wtime ();
 
-        MPI_Barrier(comm);
-        double t = MPI_Wtime ();
-        mpierr   = MPI_File_read_all (fin, MPI_BOTTOM, 1, mtype, &stat);
-        CHECK_MPIERR
-        MPI_Barrier(comm);
-        t = MPI_Wtime () - t;
+    MPI_Comm_rank (comm, &rank);
+    if (rank == 0) {
+        printf ("Alloc_buffer_time: %lf\n", t[1] - t[0]);
+        printf ("Ftype_time: %lf\n", t[2] - t[1]);
+        printf ("MPI_File_read_all_time: %lf\n", t[3] - t[2]);
 
-        MPI_Comm_rank(comm,&rank);
-
-        if (rank == 0){
-            printf ("MPI_File_read_all_time: %lf\n", t);
-            
-            MPI_File_get_info(fin,&info);
-            print_info(&info);
-            MPI_Info_free(&info);
-        }
+        MPI_File_get_info (fin, &info);
+        print_info (&info);
+        MPI_Info_free (&info);
     }
 
     // Unfilter the data
