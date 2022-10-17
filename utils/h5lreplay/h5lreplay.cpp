@@ -98,12 +98,12 @@ static int split_comm (MPI_Comm orig_comm, MPI_Comm *sub_comm, int *num_subfiles
     MPI_Comm_rank (orig_comm, &orig_rank);
 
     /* split communicator to create one sub-communicator per compute node */
-    // mpierr =
-    //    MPI_Comm_split_type (orig_comm, MPI_COMM_TYPE_SHARED, orig_rank, MPI_INFO_NULL, sub_comm);
-    // CHECK_MPIERR
-
-    mpierr = MPI_Comm_split (orig_comm, orig_rank & 1, orig_rank, sub_comm);
+    mpierr =
+        MPI_Comm_split_type (orig_comm, MPI_COMM_TYPE_SHARED, orig_rank, MPI_INFO_NULL, sub_comm);
     CHECK_MPIERR
+
+    // mpierr = MPI_Comm_split (orig_comm, orig_rank & 1, orig_rank, sub_comm);
+    // CHECK_MPIERR
 
     /* calculate subfile ID and take care of both process rank assignments:
      * block-based (MPICH_RANK_REORDER_METHOD=1) or

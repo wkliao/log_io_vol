@@ -74,7 +74,7 @@ void h5lreplay_read_data (MPI_Comm comm,
         if (ftype != MPI_DATATYPE_NULL) { MPI_Type_free (&ftype); }
         if (mtype != MPI_DATATYPE_NULL) { MPI_Type_free (&mtype); }
     });
-    double t[5];
+    double t[6];
     int rank;
     MPI_Info info;
 
@@ -141,17 +141,6 @@ void h5lreplay_read_data (MPI_Comm comm,
     MPI_Barrier (comm);
     t[4] = MPI_Wtime ();
 
-    MPI_Comm_rank (comm, &rank);
-    if (rank == 0) {
-        printf ("Alloc_buffer_time: %lf\n", t[1] - t[0]);
-        printf ("Ftype_time: %lf\n", t[2] - t[1]);
-        printf ("MPI_File_read_all_time: %lf\n", t[3] - t[2]);
-
-        MPI_File_get_info (fin, &info);
-        print_info (&info);
-        MPI_Info_free (&info);
-    }
-
     // Unfilter the data
     for (auto &reqp : reqs) {
         for (auto &req : reqp.entries) {
@@ -165,6 +154,21 @@ void h5lreplay_read_data (MPI_Comm comm,
                 memcpy (buf, req.bufs[0], csize);
             }
         }
+    }
+
+    MPI_Barrier (comm);
+    t[5] = MPI_Wtime ();
+    
+    MPI_Comm_rank (comm, &rank);
+    if (rank == 0) {
+        printf ("Alloc_buffer_time: %lf\n", t[1] - t[0]);
+        printf ("Ftype_time: %lf\n", t[2] - t[1]);
+        printf ("MPI_File_read_all_time: %lf\n", t[4] - t[3]);
+        printf ("Unfilter_time: %lf\n", t[5] - t[4]);
+
+        MPI_File_get_info (fin, &info);
+        print_info (&info);
+        MPI_Info_free (&info);
     }
 }
 
