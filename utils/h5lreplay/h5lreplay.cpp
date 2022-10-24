@@ -176,6 +176,14 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         if (subcomm != MPI_COMM_NULL) { MPI_Comm_free (&subcomm); }
     });
 
+    {
+        int rank_all;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank_all);
+        if (!rank_all){
+            printf ("h5lreplay_core\n");
+        }
+    }
+
     MPI_Barrier (MPI_COMM_WORLD);
     t[0] = MPI_Wtime ();
 
@@ -285,6 +293,8 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 t1 = MPI_Wtime ();
 
                 // Read the metadata
+                subnp=64;
+                subrank=63;
                 h5lreplay_parse_meta (subrank, subnp, lgid, nmdset, copy_arg.dsets, reqs, config);
 
                 MPI_Barrier (subcomm);

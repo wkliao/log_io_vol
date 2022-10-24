@@ -54,6 +54,14 @@ void h5lreplay_parse_meta (int rank,
         if (dsid >= 0) { H5Sclose (dsid); }
     });
 
+    {
+        int rank_all;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank_all);
+        if (!rank_all){
+            printf ("h5lreplay_parse_meta\n");
+        }
+    }
+
     // Memory space set to contiguous
     start = count = INT64_MAX - 1;
     msid          = H5Screate_simple (1, &start, &count);
@@ -165,7 +173,7 @@ void h5lreplay_parse_meta (int rank,
                         H5VL_logi_metaentry_decode (dsets[hdr->did], ep, block);
 
                         // Insert to cache
-                        bcache[ep] = block.sels;
+                        //bcache[ep] = block.sels;
                     }
                     ep += hdr->meta_size;
 
@@ -179,6 +187,7 @@ void h5lreplay_parse_meta (int rank,
                 // Clean up the cache, referenced are local to each section
                 bcache.clear ();
             } else {
+                abort();
                 for (j = 0; ep < sec.buf + count; j++) {
                     H5VL_logi_meta_hdr *hdr = (H5VL_logi_meta_hdr *)ep;
                     if ((j - sec.off) % sec.stride == 0) {

@@ -78,12 +78,21 @@ void h5lreplay_read_data (MPI_Comm comm,
     int rank;
     MPI_Info info;
 
+    {
+        int rank_all;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank_all);
+        if (!rank_all){
+            printf ("h5lreplay_read_data\n");
+        }
+    }
+
     t[0] = MPI_Wtime ();
     // Allocate buffer
     zbsize = 0;
     for (auto &reqp : reqs) {
         for (auto &req : reqp.entries) {
             req.bufs.resize (req.sels.size ());
+            /*
             bsize = 0;
             for (j = 0; j < (int)(req.sels.size ()); j++) {
                 esize = dsets[req.hdr.did].esize;
@@ -96,6 +105,8 @@ void h5lreplay_read_data (MPI_Comm comm,
             if (zbsize < bsize) { zbsize = bsize; }
             // Comrpessed size can be larger
             if (bsize < (size_t) (req.hdr.fsize)) { bsize = req.hdr.fsize; }
+            */
+            bsize = req.hdr.fsize;
             // Allocate buffer
             buf = (char *)malloc (bsize);
             assert (buf != NULL);
@@ -104,7 +115,7 @@ void h5lreplay_read_data (MPI_Comm comm,
             }
 
             // Record off and len for mpi type
-            idxs.push_back ({req.hdr.foff, (MPI_Aint)req.bufs[0], (int)req.hdr.fsize});
+            idxs.push_back ({req.hdr.foff, (MPI_Aint)buf, (int)req.hdr.fsize});
         }
     }
     // zbuf = (char *)malloc (zbsize);
@@ -159,7 +170,7 @@ void h5lreplay_read_data (MPI_Comm comm,
     MPI_Barrier (comm);
     t[5] = MPI_Wtime ();
     
-    MPI_Comm_rank (comm, &rank);
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);
     if (rank == 0) {
         printf ("Alloc_buffer_time: %lf\n", t[1] - t[0]);
         printf ("Ftype_time: %lf\n", t[2] - t[1]);
