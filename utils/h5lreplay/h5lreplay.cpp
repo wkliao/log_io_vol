@@ -98,11 +98,12 @@ static int split_comm (MPI_Comm orig_comm, MPI_Comm *sub_comm, int *num_subfiles
     MPI_Comm_rank (orig_comm, &orig_rank);
 
     /* split communicator to create one sub-communicator per compute node */
+
     mpierr =
         MPI_Comm_split_type (orig_comm, MPI_COMM_TYPE_SHARED, orig_rank, MPI_INFO_NULL, sub_comm);
     CHECK_MPIERR
 
-    // mpierr = MPI_Comm_split (orig_comm, orig_rank & 1, orig_rank, sub_comm);
+    // mpierr = MPI_Comm_split (orig_comm, orig_rank & 3, orig_rank, sub_comm);
     // CHECK_MPIERR
 
     /* calculate subfile ID and take care of both process rank assignments:
@@ -269,6 +270,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
             // Open the subfile
             if (i + subid < nsubfiles) {
+                printf("Rank %d, subfile %d\n", rank,i + subid);
                 fsubid = H5Fopen (subpath.c_str (), H5F_ACC_RDONLY, subfaplid);
                 CHECK_ID (fsubid)
 
@@ -293,8 +295,6 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 t1 = MPI_Wtime ();
 
                 // Read the metadata
-                subnp=64;
-                subrank=63;
                 h5lreplay_parse_meta (subrank, subnp, lgid, nmdset, copy_arg.dsets, reqs, config);
 
                 MPI_Barrier (subcomm);
