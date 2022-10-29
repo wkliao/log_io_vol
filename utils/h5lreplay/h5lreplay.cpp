@@ -270,7 +270,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
             // Open the subfile
             if (i + subid < nsubfiles) {
-                printf("Rank %d, subfile %d\n", rank,i + subid);
+                //printf("Rank %d, subfile %d\n", rank,i + subid);
                 fsubid = H5Fopen (subpath.c_str (), H5F_ACC_RDONLY, subfaplid);
                 CHECK_ID (fsubid)
 
