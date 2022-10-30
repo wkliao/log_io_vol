@@ -246,6 +246,9 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     if (config & H5VL_FILEI_CONFIG_SUBFILING) {
         std::string subpath;
 
+        MPI_Barrier (subcomm);
+        t1 = MPI_Wtime ();
+
         // Split the communicator according to nodes
         nsubfiles = att_buf[4];
         err       = split_comm (MPI_COMM_WORLD, &subcomm, &nnode, &subid);
@@ -256,9 +259,17 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         err       = H5Pset_fapl_mpio (subfaplid, subcomm, MPI_INFO_NULL);
         CHECK_ERR
 
+        MPI_Barrier (subcomm);
+        t2 = MPI_Wtime ();
+        t[10] += t2 - t1;
+
         // Close attr in main file
         H5Aclose (aid);
         aid = -1;
+
+        MPI_Barrier (subcomm);
+        t1 = MPI_Wtime ();
+        t[11] += t1 - t2;
 
         // Iterate subdir
         for (i = 0; i < nsubfiles; i += nnode) {
@@ -270,6 +281,8 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
             // Open the subfile
             if (i + subid < nsubfiles) {
+                MPI_Barrier (subcomm);
+                t1 = MPI_Wtime ();
                 //printf("Rank %d, subfile %d\n", rank,i + subid);
                 fsubid = H5Fopen (subpath.c_str (), H5F_ACC_RDONLY, subfaplid);
                 CHECK_ID (fsubid)
@@ -277,6 +290,10 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 mpierr = MPI_File_open (subcomm, subpath.c_str (), MPI_MODE_RDONLY, MPI_INFO_NULL,
                                         &fsub);
                 CHECK_MPIERR
+
+                MPI_Barrier (subcomm);
+                t2 = MPI_Wtime ();
+                t[6] += t2 - t1;
 
                 // Read file metadata
                 aid = H5Aopen (fsubid, H5VL_LOG_FILEI_ATTR,
@@ -287,30 +304,38 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 // nldset = att_buf[1];
                 nmdset = att_buf[2];
 
+                MPI_Barrier (subcomm);
+                t1 = MPI_Wtime ();
+                t[7] += t1 - t2;
+
                 // Open the log group
                 lgid = H5Gopen2 (fsubid, H5VL_LOG_FILEI_GROUP_LOG, H5P_DEFAULT);
                 CHECK_ID (lgid)
 
                 MPI_Barrier (subcomm);
-                t1 = MPI_Wtime ();
+                t2 = MPI_Wtime ();
+                t[8] += t2 - t1;
 
                 // Read the metadata
                 h5lreplay_parse_meta (subrank, subnp, lgid, nmdset, copy_arg.dsets, reqs, config);
 
                 MPI_Barrier (subcomm);
-                t2 = MPI_Wtime ();
-                t[4] += t2 - t1;
+                t1 = MPI_Wtime ();
+                t[4] += t1 - t2;
 
                 // Read the data
                 h5lreplay_read_data (subcomm, fsub, copy_arg.dsets, reqs);
 
                 MPI_Barrier (subcomm);
-                t1 = MPI_Wtime ();
-                t[5] += t1 - t2;
+                t2 = MPI_Wtime ();
+                t[5] += t2 - t1;
             }
 
             // Write the data
             // h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
+            
+            MPI_Barrier (subcomm);
+            t1 = MPI_Wtime ();
 
             if (i + subid < nsubfiles) {
                 // Close the subfile
@@ -323,6 +348,9 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 H5Fclose (fsubid);
                 fsubid = -1;
             }
+            MPI_Barrier (subcomm);
+            t2 = MPI_Wtime ();
+            t[9] += t2 - t1;
         }
     } else {
         // Open the log group
@@ -356,6 +384,12 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         printf ("open_time: %lf\n", t[1] - t[0]);
         printf ("hdr_time: %lf\n", t[2] - t[1]);
         printf ("read_time: %lf\n", t[3] - t[2]);
+        printf ("comm_split_time: %lf\n", t[10]);
+        printf ("aclose_time: %lf\n", t[11]);
+        printf ("file_open_time: %lf\n", t[6]);
+        printf ("aread_time: %lf\n", t[7]);
+        printf ("gopen_time: %lf\n", t[8]);
+        printf ("file_close_time: %lf\n", t[9]);
         printf ("read_meta_time: %lf\n", t[4]);
         printf ("read_data_time: %lf\n", t[5]);
         printf ("e2e_time: %lf\n", t[3] - t[0]);

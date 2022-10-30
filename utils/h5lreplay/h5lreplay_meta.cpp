@@ -155,50 +155,35 @@ void h5lreplay_parse_meta (int rank,
 
             // Parse the metadata
             ep = sec.buf;
-            if (config &
-                H5VL_FILEI_CONFIG_METADATA_SHARE) {  // Need to maintina cache if file contains
-                                                     // referenced metadata entries
-                for (j = 0; ep < sec.buf + count; j++) {
-                    H5VL_logi_meta_hdr *hdr = (H5VL_logi_meta_hdr *)ep;
+
+            for (j = 0; ep < sec.buf + count; j++) {
+                H5VL_logi_meta_hdr *hdr = (H5VL_logi_meta_hdr *)ep;
 
 #ifdef WORDS_BIGENDIAN
-                    H5VL_logi_lreverse ((uint32_t *)ep,
-                                        (uint32_t *)(ep + sizeof (H5VL_logi_meta_hdr)));
+                H5VL_logi_lreverse ((uint32_t *)ep,
+                                    (uint32_t *)(ep + sizeof (H5VL_logi_meta_hdr)));
 #endif
 
-                    // Have to parse all entries for reference purpose
-                    if (hdr->flag & H5VL_LOGI_META_FLAG_SEL_REF) {
-                        H5VL_logi_metaentry_ref_decode (dsets[hdr->did], ep, block, bcache);
-                    } else {
-                        H5VL_logi_metaentry_decode (dsets[hdr->did], ep, block);
+                // Have to parse all entries for reference purpose
+                if (hdr->flag & H5VL_LOGI_META_FLAG_SEL_REF) {
+                    H5VL_logi_metaentry_ref_decode (dsets[hdr->did], ep, block, bcache);
+                } else {
+                    H5VL_logi_metaentry_decode (dsets[hdr->did], ep, block);
 
-                        // Insert to cache
-                        //bcache[ep] = block.sels;
-                    }
-                    ep += hdr->meta_size;
-
-                    // Only insert to index if we are responsible to the entry
-                    if ((j - sec.off) % sec.stride == 0) {
-                        // Insert to the index
-                        reqs[hdr->did].insert (block);
-                    }
+                    // Insert to cache
+                    //bcache[ep] = block.sels;
                 }
+                ep += hdr->meta_size;
 
-                // Clean up the cache, referenced are local to each section
-                bcache.clear ();
-            } else {
-                abort();
-                for (j = 0; ep < sec.buf + count; j++) {
-                    H5VL_logi_meta_hdr *hdr = (H5VL_logi_meta_hdr *)ep;
-                    if ((j - sec.off) % sec.stride == 0) {
-                        H5VL_logi_metaentry_decode (dsets[hdr->did], ep, block);
-                        ep += hdr->meta_size;
-
-                        // Insert to the index
-                        reqs[hdr->did].insert (block);
-                    }
+                // Only insert to index if we are responsible to the entry
+                if ((j - sec.off) % sec.stride == 0) {
+                    // Insert to the index
+                    reqs[hdr->did].insert (block);
                 }
             }
+
+            // Clean up the cache, referenced are local to each section
+            bcache.clear ();
         }
     }
 }
