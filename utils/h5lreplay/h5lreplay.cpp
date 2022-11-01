@@ -160,7 +160,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     int subid;                      // id of the node
     int subrank;                    // rank within the node
     int subnp;                      // number of processes within the node
-    double t[6], t1, t2;
+    double t[12], t1, t2;
     MPI_Comm subcomm = MPI_COMM_NULL;  // communicator within the node
     H5VL_logi_err_finally finally ([&] () -> void {
         if (faplid >= 0) { H5Pclose (faplid); }
@@ -179,11 +179,11 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
     {
         int rank_all;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank_all);
-        if (!rank_all){
-            printf ("h5lreplay_core\n");
-        }
+        MPI_Comm_rank (MPI_COMM_WORLD, &rank_all);
+        if (!rank_all) { printf ("h5lreplay_core\n"); }
     }
+
+    memset (t, 0, sizeof (t));
 
     MPI_Barrier (MPI_COMM_WORLD);
     t[0] = MPI_Wtime ();
@@ -240,7 +240,6 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
     MPI_Barrier (MPI_COMM_WORLD);
     t[2] = MPI_Wtime ();
-    t[4] = t[5] = 0;
 
     reqs.resize (ndset);
     if (config & H5VL_FILEI_CONFIG_SUBFILING) {
@@ -283,7 +282,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
             if (i + subid < nsubfiles) {
                 MPI_Barrier (subcomm);
                 t1 = MPI_Wtime ();
-                //printf("Rank %d, subfile %d\n", rank,i + subid);
+                // printf("Rank %d, subfile %d\n", rank,i + subid);
                 fsubid = H5Fopen (subpath.c_str (), H5F_ACC_RDONLY, subfaplid);
                 CHECK_ID (fsubid)
 
@@ -333,7 +332,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
 
             // Write the data
             // h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
-            
+
             MPI_Barrier (MPI_COMM_WORLD);
             t1 = MPI_Wtime ();
 
