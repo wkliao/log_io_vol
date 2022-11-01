@@ -246,7 +246,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     if (config & H5VL_FILEI_CONFIG_SUBFILING) {
         std::string subpath;
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t1 = MPI_Wtime ();
 
         // Split the communicator according to nodes
@@ -259,7 +259,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         err       = H5Pset_fapl_mpio (subfaplid, subcomm, MPI_INFO_NULL);
         CHECK_ERR
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t2 = MPI_Wtime ();
         t[10] += t2 - t1;
 
@@ -267,7 +267,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
         H5Aclose (aid);
         aid = -1;
 
-        MPI_Barrier (subcomm);
+        MPI_Barrier (MPI_COMM_WORLD);
         t1 = MPI_Wtime ();
         t[11] += t1 - t2;
 
@@ -334,7 +334,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
             // Write the data
             // h5lreplay_write_data (foutid, copy_arg.dsets, reqs);
             
-            MPI_Barrier (subcomm);
+            MPI_Barrier (MPI_COMM_WORLD);
             t1 = MPI_Wtime ();
 
             if (i + subid < nsubfiles) {
@@ -348,7 +348,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 H5Fclose (fsubid);
                 fsubid = -1;
             }
-            MPI_Barrier (subcomm);
+            MPI_Barrier (MPI_COMM_WORLD);
             t2 = MPI_Wtime ();
             t[9] += t2 - t1;
         }
