@@ -242,7 +242,7 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
     t[2] = MPI_Wtime ();
 
     reqs.resize (ndset);
-    if (config & H5VL_FILEI_CONFIG_SUBFILING) {
+    if (true) {
         std::string subpath;
 
         MPI_Barrier (MPI_COMM_WORLD);
@@ -328,6 +328,8 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
                 MPI_Barrier (subcomm);
                 t2 = MPI_Wtime ();
                 t[5] += t2 - t1;
+            } else {
+                abort ();
             }
 
             // Write the data
@@ -352,6 +354,8 @@ void h5lreplay_core (std::string &inpath, std::string &outpath, int rank, int np
             t[9] += t2 - t1;
         }
     } else {
+        abort ();
+
         // Open the log group
         lgid = H5Gopen2 (finid, H5VL_LOG_FILEI_GROUP_LOG, H5P_DEFAULT);
         CHECK_ID (lgid)
